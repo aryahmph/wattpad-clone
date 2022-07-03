@@ -1,0 +1,98 @@
+version: "3.8"
+services:
+  kaguya-postgres:
+    image: postgres:14.4-alpine
+    container_name: "kaguya-postgres"
+    restart: always
+    ports:
+      - "5432:5432"
+    environment:
+      - POSTGRES_USER=root
+      - POSTGRES_PASSWORD=root
+      - POSTGRES_DB=kaguya
+    volumes:
+      - kaguyaPostgresDB:/var/lib/postgresql/data
+    networks:
+      - wattpad
+  kaguya-service:
+    build:
+      context: ./src/kaguya
+    container_name: "kaguya-service"
+    networks:
+      - wattpad
+    depends_on:
+      - kaguya-postgres
+      - nsqd
+  shirogane-redis:
+    image: redis:6.2.7-alpine
+    container_name: "shirogane-redis"
+    restart: always
+    command: redis-server /usr/local/etc/redis/redis.conf
+    ports:
+      - "6379:6379"
+    volumes:
+      - ./src/shirogane/config/redis/redis.conf:/usr/local/etc/redis/redis.conf
+    networks:
+      - wattpad
+  shirogane-service:
+    build:
+      context: ./src/shirogane
+    container_name: "shirogane-service"
+    networks:
+      - wattpad
+    depends_on:
+      - shirogane-redis
+      - kaguya-service
+      - ishigami-service
+  mailhog:
+    image: mailhog/mailhog:v1.0.1
+    container_name: "mailhog"
+    restart: always
+    ports:
+      - "1025:1025"
+      - "8025:8025"
+    networks:
+      - wattpad
+  nsqlookupd:
+    image: nsqio/nsq
+    container_name: "nsqlookupd"
+    command: /nsqlookupd
+    ports:
+      - "4160:4160"
+      - "4161:4161"
+    networks:
+      - wattpad
+  nsqd:
+    image: nsqio/nsq
+    container_name: "nsqd"
+    command: /nsqd --lookupd-tcp-address=nsqlookupd:4160
+    depends_on:
+      - nsqlookupd
+    ports:
+      - "4151:4151"
+      - "4150:4150"
+    networks:
+      - wattpad
+  nsqadmin:
+    image: nsqio/nsq
+    command: /nsqadmin --lookupd-http-address=nsqlookupd:4161
+    depends_on:
+      - nsqlookupd
+    ports:
+      - "4171:4171"
+    networks:
+      - wattpad
+  ishigami-service:
+    build:
+      context: ./src/ishigami
+    container_name: "ishigami-service"
+    depends_on:
+      - mailhog
+      - nsqlookupd
+    networks:
+      - wattpad
+volumes:
+  kaguyaPostgresDB:
+networks:
+  wattpad:
+    name: wattpad_net

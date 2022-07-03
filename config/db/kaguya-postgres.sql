@@ -1,0 +1,3 @@
+CREATE user "kaguya";
+CREATE DATABASE "kaguya";
+GRANT ALL PRIVILEGES ON DATABASE kaguya TO kaguya;

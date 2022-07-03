@@ -1,0 +1,22 @@
+@startuml
+queue NSQ
+node Ishigami
+Ishigami -- NSQ
+
+node Shirogane
+database Redis
+Shirogane -- Redis : Auth Session
+
+node Kaguya
+database PostgresSQL
+Shirogane -- Kaguya
+Kaguya -- PostgresSQL
+Kaguya -- NSQ : Publish Mail
+
+node Miko
+database MySQL
+database ElasticSearch
+Shirogane -- Miko
+Miko -- MySQL : Command
+Miko -- ElasticSearch : Query
+@enduml
